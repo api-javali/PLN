@@ -1,0 +1,99 @@
+{
+  "commands": [
+    {
+      "text": "mude a cor do fundo para azul",
+      "action": "change_background_color",
+      "params": {"color": "blue"}
+    },
+    {
+      "text": "altere a cor de fundo para vermelho",
+      "action": "change_background_color", 
+      "params": {"color": "red"}
+    },
+    {
+      "text": "troque a cor do background para verde",
+      "action": "change_background_color",
+      "params": {"color": "green"}
+    },
+    {
+      "text": "faça o fundo amarelo",
+      "action": "change_background_color",
+      "params": {"color": "yellow"}
+    },
+    {
+      "text": "aumente o tamanho da fonte",
+      "action": "increase_font_size",
+      "params": {}
+    },
+    {
+      "text": "aumente a letra",
+      "action": "increase_font_size", 
+      "params": {}
+    },
+    {
+      "text": "deixe o texto maior",
+      "action": "increase_font_size",
+      "params": {}
+    },
+    {
+      "text": "diminua a fonte",
+      "action": "decrease_font_size",
+      "params": {}
+    },
+    {
+      "text": "reduza o tamanho do texto",
+      "action": "decrease_font_size",
+      "params": {}
+    },
+    {
+      "text": "mova o menu para a esquerda",
+      "action": "move_component",
+      "params": {"component": "menu", "direction": "left"}
+    },
+    {
+      "text": "desloque a barra de navegação para a direita", 
+      "action": "move_component",
+      "params": {"component": "menu", "direction": "right"}
+    },
+    {
+      "text": "posicione o cabeçalho no topo",
+      "action": "move_component",
+      "params": {"component": "header", "direction": "top"}
+    },
+    {
+      "text": "vá para a página inicial",
+      "action": "navigate",
+      "params": {"page": "home"}
+    },
+    {
+      "text": "navegue para contato",
+      "action": "navigate", 
+      "params": {"page": "contact"}
+    },
+    {
+      "text": "ir para sobre nós",
+      "action": "navigate",
+      "params": {"page": "about"}
+    },
+    {
+      "text": "acesse configurações",
+      "action": "navigate",
+      "params": {"page": "settings"}
+    },
+    {
+      "text": "redefinir layout",
+      "action": "reset_layout",
+      "params": {}
+    },
+    {
+      "text": "voltar ao padrão",
+      "action": "reset_layout", 
+      "params": {}
+    },
+    {
+      "text": "restaurar configurações iniciais",
+      "action": "reset_layout",
+      "params": {}
+    }
+  ]
+}
