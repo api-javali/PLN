@@ -1,8 +1,3 @@
-"""
-Flask Backend para o Assistente Virtual
-Usa Word2Vec Profissional + MLP + Sistema Híbrido
-"""
-
 from flask import Flask, render_template, request, jsonify
 from assistente.virtual_assistant import VirtualAssistant
 

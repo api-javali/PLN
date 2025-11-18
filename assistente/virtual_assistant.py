@@ -1,17 +1,3 @@
-"""
-Assistente Virtual v2 FINAL - CORRIGIDO E TESTADO
-Usa Word2Vec (Gensim) + MLP + Sistema Híbrido
-
-✅ Todas as melhorias implementadas:
-1. Sistema de confirmação (sim/não)
-2. Validação de conflitos de ação
-3. Validação de conflitos de parâmetros (CORRIGIDA)
-4. Detecção de negações
-5. Correção ortográfica automática (Levenshtein)
-6. Execução direta >60% (sem validação obrigatória)
-7. Proteção contra NoneType
-"""
-
 import json
 import numpy as np
 from assistente.word2vec import Word2VecEmbedding
