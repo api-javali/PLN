@@ -1,99 +1,148 @@
 {
   "commands": [
-    {
-      "text": "mude a cor do fundo para azul",
-      "action": "change_background_color",
-      "params": {"color": "blue"}
-    },
-    {
-      "text": "altere a cor de fundo para vermelho",
-      "action": "change_background_color", 
-      "params": {"color": "red"}
-    },
-    {
-      "text": "troque a cor do background para verde",
-      "action": "change_background_color",
-      "params": {"color": "green"}
-    },
-    {
-      "text": "faça o fundo amarelo",
-      "action": "change_background_color",
-      "params": {"color": "yellow"}
-    },
-    {
-      "text": "aumente o tamanho da fonte",
-      "action": "increase_font_size",
-      "params": {}
-    },
-    {
-      "text": "aumente a letra",
-      "action": "increase_font_size", 
-      "params": {}
-    },
-    {
-      "text": "deixe o texto maior",
-      "action": "increase_font_size",
-      "params": {}
-    },
-    {
-      "text": "diminua a fonte",
-      "action": "decrease_font_size",
-      "params": {}
-    },
-    {
-      "text": "reduza o tamanho do texto",
-      "action": "decrease_font_size",
-      "params": {}
-    },
-    {
-      "text": "mova o menu para a esquerda",
-      "action": "move_component",
-      "params": {"component": "menu", "direction": "left"}
-    },
-    {
-      "text": "desloque a barra de navegação para a direita", 
-      "action": "move_component",
-      "params": {"component": "menu", "direction": "right"}
-    },
-    {
-      "text": "posicione o cabeçalho no topo",
-      "action": "move_component",
-      "params": {"component": "header", "direction": "top"}
-    },
-    {
-      "text": "vá para a página inicial",
-      "action": "navigate",
-      "params": {"page": "home"}
-    },
-    {
-      "text": "navegue para contato",
-      "action": "navigate", 
-      "params": {"page": "contact"}
-    },
-    {
-      "text": "ir para sobre nós",
-      "action": "navigate",
-      "params": {"page": "about"}
-    },
-    {
-      "text": "acesse configurações",
-      "action": "navigate",
-      "params": {"page": "settings"}
-    },
-    {
-      "text": "redefinir layout",
-      "action": "reset_layout",
-      "params": {}
-    },
-    {
-      "text": "voltar ao padrão",
-      "action": "reset_layout", 
-      "params": {}
-    },
-    {
-      "text": "restaurar configurações iniciais",
-      "action": "reset_layout",
-      "params": {}
-    }
+   
+    { "text": "mude a cor do fundo para azul", "action": "change_background_color", "params": {"color": "blue"} },
+    { "text": "coloque o fundo azul", "action": "change_background_color", "params": {"color": "blue"} },
+    { "text": "quero fundo azul", "action": "change_background_color", "params": {"color": "blue"} },
+    { "text": "fundo azul", "action": "change_background_color", "params": {"color": "blue"} },
+    { "text": "pode deixar o fundo azul?", "action": "change_background_color", "params": {"color": "blue"} },
+    { "text": "azul no fundo", "action": "change_background_color", "params": {"color": "blue"} },
+    
+
+    
+    { "text": "mude a cor do fundo para vermelho", "action": "change_background_color", "params": {"color": "red"} },
+    { "text": "coloque o fundo vermelho", "action": "change_background_color", "params": {"color": "red"} },
+    { "text": "quero fundo vermelho", "action": "change_background_color", "params": {"color": "red"} },
+    { "text": "fundo vermelho", "action": "change_background_color", "params": {"color": "red"} },
+    { "text": "pode deixar o fundo vermelho?", "action": "change_background_color", "params": {"color": "red"} },
+    { "text": "vermelho no fundo", "action": "change_background_color", "params": {"color": "red"} },
+
+   
+    { "text": "mude a cor do fundo para verde", "action": "change_background_color", "params": {"color": "green"} },
+    { "text": "coloque o fundo verde", "action": "change_background_color", "params": {"color": "green"} },
+    { "text": "quero fundo verde", "action": "change_background_color", "params": {"color": "green"} },
+    { "text": "fundo verde", "action": "change_background_color", "params": {"color": "green"} },
+    { "text": "pode deixar o fundo verde?", "action": "change_background_color", "params": {"color": "green"} },
+    { "text": "verde no fundo", "action": "change_background_color", "params": {"color": "green"} },
+
+    { "text": "mude a cor do fundo para laranja", "action": "change_background_color", "params": {"color": "orange"} },
+    { "text": "coloque o fundo laranja", "action": "change_background_color", "params": {"color": "orange"} },
+    { "text": "quero fundo laranja", "action": "change_background_color", "params": {"color": "orange"} },
+    { "text": "fundo laranja", "action": "change_background_color", "params": {"color": "orange"} },
+    { "text": "pode deixar o fundo laranja?", "action": "change_background_color", "params": {"color": "orange"} },
+    { "text": "laranja no fundo", "action": "change_background_color", "params": {"color": "orange"} },    
+
+    { "text": "mude a cor do fundo para roxo", "action": "change_background_color", "params": {"color": "purple"} },
+    { "text": "coloque o fundo roxo", "action": "change_background_color", "params": {"color": "purple"} },
+    { "text": "quero fundo roxo", "action": "change_background_color", "params": {"color": "purple"} },
+    { "text": "fundo roxo", "action": "change_background_color", "params": {"color": "purple"} },
+    { "text": "pode deixar o fundo roxo?", "action": "change_background_color", "params": {"color": "purple"} },
+    { "text": "roxo no fundo", "action": "change_background_color", "params": {"color": "purple"} },
+
+
+    { "text": "aumente o tamanho da fonte", "action": "increase_font_size", "params": {} },
+    { "text": "deixe a fonte maior", "action": "increase_font_size", "params": {} },
+    { "text": "quero letras grandes", "action": "increase_font_size", "params": {} },
+    { "text": "aumentar fonte", "action": "increase_font_size", "params": {} },
+    { "text": "aumente a fonte", "action": "increase_font_size", "params": {} },
+    { "text": "aumentar tamanho da fonte", "action": "increase_font_size", "params": {} },
+    { "text": "aumentar o tamanho da fonte", "action": "increase_font_size", "params": {} },
+    { "text": "aumentar o tamanho das letras", "action": "increase_font_size", "params": {} },
+
+    
+    { "text": "diminua o tamanho da fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "deixe a fonte menor", "action": "decrease_font_size", "params": {} },
+    { "text": "quero letras pequenas", "action": "decrease_font_size", "params": {} },
+    { "text": "diminuir fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "diminuir a fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "diminua a fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "diminuir tamanho da fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "diminuir o tamanho da fonte", "action": "decrease_font_size", "params": {} },
+    { "text": "diminuir o tamanho das letras", "action": "decrease_font_size", "params": {} },
+
+    
+    { "text": "vá para a página sobre", "action": "navigate", "params": {"page": "about"} },
+    { "text": "ir para sobre", "action": "navigate", "params": {"page": "about"} },
+    { "text": "quero ver sobre", "action": "navigate", "params": {"page": "about"} },
+    { "text": "abrir página sobre", "action": "navigate", "params": {"page": "about"} },
+    { "text": "sobre", "action": "navigate", "params": {"page": "about"} },
+    { "text": "sobre nós", "action": "navigate", "params": {"page": "about"} },
+    
+    
+    { "text": "vá para a página inicial", "action": "navigate", "params": {"page": "home"} },
+    { "text": "ir para home", "action": "navigate", "params": {"page": "home"} },
+    { "text": "quero ver início", "action": "navigate", "params": {"page": "home"} },
+    { "text": "abrir página inicial", "action": "navigate", "params": {"page": "home"} },
+    { "text": "home", "action": "navigate", "params": {"page": "home"} },
+    { "text": "início", "action": "navigate", "params": {"page": "home"} },
+    { "text": "página inicial", "action": "navigate", "params": {"page": "home"} },
+
+
+    { "text": "vá para a página de contatos", "action": "navigate", "params": {"page": "contacts"} },
+    { "text": "ir para contatos", "action": "navigate", "params": {"page": "contacts"} },
+    { "text": "quero ver contatos", "action": "navigate", "params": {"page": "contacts"} },
+    { "text": "abrir página de contatos", "action": "navigate", "params": {"page": "contacts"} },
+    { "text": "contatos", "action": "navigate", "params": {"page": "contacts"} },
+    { "text": "página de contatos", "action": "navigate", "params": {"page": "contacts"} },
+
+    { "text": "vá para a página de configurações", "action": "navigate", "params": {"page": "settings"} },
+    { "text": "ir para configurações", "action": "navigate", "params": {"page": "settings"} },
+    { "text": "quero ver configurações", "action": "navigate", "params": {"page": "settings"} },
+    { "text": "abrir página de configurações", "action": "navigate", "params": {"page": "settings"} },
+    { "text": "configurações", "action": "navigate", "params": {"page": "settings"} },
+    { "text": "página de configurações", "action": "navigate", "params": {"page": "settings"} },
+
+    
+    { "text": "mova o menu para a esquerda", "action": "move_component", "params": {"component": "menu", "direction": "left"} },
+    { "text": "coloque o menu à esquerda", "action": "move_component", "params": {"component": "menu", "direction": "left"} },
+    { "text": "menu na esquerda", "action": "move_component", "params": {"component": "menu", "direction": "left"} },
+    { "text": "menu à esquerda", "action": "move_component", "params": {"component": "menu", "direction": "left"} },
+    
+
+    
+    { "text": "mova o menu para a direita", "action": "move_component", "params": {"component": "menu", "direction": "right"} },
+    { "text": "coloque o menu à direita", "action": "move_component", "params": {"component": "menu", "direction": "right"} },
+    { "text": "menu na direita", "action": "move_component", "params": {"component": "menu", "direction": "right"} },
+    { "text": "menu à direita", "action": "move_component", "params": {"component": "menu", "direction": "right"} },
+    { "text": "menu do lado direito", "action": "move_component", "params": {"component": "menu", "direction": "right"} },
+    
+
+    
+    { "text": "mova o menu para o centro", "action": "move_component", "params": {"component": "menu", "direction": "center"} },
+    { "text": "coloque o menu no centro", "action": "move_component", "params": {"component": "menu", "direction": "center"} },
+    { "text": "menu centralizado", "action": "move_component", "params": {"component": "menu", "direction": "center"} },
+    { "text": "menu no centro", "action": "move_component", "params": {"component": "menu", "direction": "center"} },
+    { "text": "menu ao centro", "action": "move_component", "params": {"component": "menu", "direction": "center"} },
+
+
+    {"text": "menu embaixo", "action": "move_component", "params": {"component": "menu", "direction": "bottom"} },
+    {"text": "coloque o menu embaixo", "action": "move_component", "params": {"component": "menu", "direction": "bottom"} },
+    {"text": "mova o menu para baixo", "action": "move_component", "params": {"component": "menu", "direction": "bottom"} },
+    {"text": "menu na parte de baixo", "action": "move_component", "params": {"component": "menu", "direction": "bottom"} },
+    {"text": "menu abaixo", "action": "move_component", "params": {"component": "menu", "direction": "bottom"} },
+    
+
+    {"text": "menu acima", "action": "move_component", "params": {"component": "menu", "direction": "top"} },
+    {"text": "coloque o menu acima", "action": "move_component", "params": {"component": "menu", "direction": "top"} },
+    {"text": "mova o menu para cima", "action": "move_component", "params": {"component": "menu", "direction": "top"} },
+    {"text": "menu na parte de cima", "action": "move_component", "params": {"component": "menu", "direction": "top"} },
+    {"text": "menu no topo", "action": "move_component", "params": {"component": "menu", "direction": "top"} },
+
+    
+    { "text": "redefinir layout", "action": "reset_layout", "params": {} },
+    { "text": "voltar ao padrão", "action": "reset_layout", "params": {} },
+    { "text": "resetar configurações", "action": "reset_layout", "params": {} },
+    { "text": "restaurar padrão", "action": "reset_layout", "params": {} },
+    { "text": "resetar layout", "action": "reset_layout", "params": {} },
+    { "text": "restaurar as configurações", "action": "reset_layout", "params": {} },
+    { "text": "voltar às configurações padrão", "action": "reset_layout", "params": {} },
+        
+
+    
+    { "text": "qual o seu nome?", "action": "unknown", "params": {} },
+    { "text": "me conte uma piada", "action": "unknown", "params": {} },
+    { "text": "como está o tempo hoje?", "action": "unknown", "params": {} },
+    { "text": "gosto de pizza", "action": "unknown", "params": {} },
+    { "text": "me ajude com matemática", "action": "unknown", "params": {} }
   ]
 }
