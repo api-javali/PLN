@@ -115,44 +115,36 @@ function addMessage(sender, text) {
 function updateUI(update) {
     const body = document.getElementById('body');
     const navMenu = document.getElementById('navMenu');
-    navMenu.classList.remove('left', 'right', 'center', 'bottom', 'top');
-    navMenu.classList.add(update.menuPosition);
-
-    // Adiciona/remover classe para ajuste do body
-    if (update.menuPosition === 'bottom') {
-        document.body.classList.add('has-bottom-menu');
-    } else {
-        document.body.classList.remove('has-bottom-menu');
-    }
-    
-    // Atualiza cor de fundo
-    if (update.backgroundColor) {
-        body.style.backgroundColor = update.backgroundColor;
-        currentState.backgroundColor = update.backgroundColor;
-    }
-
-    // Atualiza cor do texto
-    if (update.textColor) {
-        body.style.color = update.textColor;
-        currentState.textColor = update.textColor;
-    }
-
-    // Atualiza tamanho da fonte
-    if (update.fontSize) {
-        body.style.fontSize = update.fontSize;
-        currentState.fontSize = update.fontSize;
-    }
-
-    // Atualiza posição do menu
-    if (update.menuPosition) {
+    // Verifica se navMenu existe antes de acessar classList
+    if (navMenu) {
+        navMenu.classList.remove('left', 'right', 'center', 'bottom', 'top');
+        navMenu.classList.add(update.menuPosition);
         navMenu.className = 'nav-menu ' + update.menuPosition;
-        currentState.menuPosition = update.menuPosition;
+    }
+
+    // Verifica se body existe antes de acessar classList
+    if (body) {
+        if (update.menuPosition === 'bottom') {
+            body.classList.add('has-bottom-menu');
+        } else {
+            body.classList.remove('has-bottom-menu');
+        }
+        if (update.backgroundColor) body.style.backgroundColor = update.backgroundColor;
+        if (update.textColor) body.style.color = update.textColor;
+        if (update.fontSize) body.style.fontSize = update.fontSize;
     }
 
     // Navega para página
     if (update.currentPage && update.currentPage !== currentState.currentPage) {
         navigateToPage(update.currentPage);
     }
+
+    // Atualiza estado
+    currentState.backgroundColor = update.backgroundColor || currentState.backgroundColor;
+    currentState.textColor = update.textColor || currentState.textColor;
+    currentState.fontSize = update.fontSize || currentState.fontSize;
+    currentState.menuPosition = update.menuPosition || currentState.menuPosition;
+    currentState.currentPage = update.currentPage || currentState.currentPage;
 
     updateStateDisplay();
 }
@@ -213,23 +205,14 @@ async function changeModel() {
 loadInitialState();
 
 document.addEventListener('DOMContentLoaded', () => {
-    const inputText = document.getElementById('inputText');
-    const btnCompare = document.getElementById('btnCompare');
-    const btnWV = document.getElementById('btnWV');
-    const btnTR = document.getElementById('btnTR');
-    const wvResult = document.getElementById('wvResult');
-    const trResult = document.getElementById('trResult');
-    const statusDiv = document.getElementById('statusDiv');
-
-    async function fetchStatus() {
-        const res = await fetch('/api/debug/status');
-        const data = await res.json();
-        statusDiv.textContent = `Current: ${data.current_model} — Training: ${JSON.stringify(data.training_status)}`;
-        return data;
-    }
+    const compareInput = document.getElementById('compareInput');
+    const btnCompareModels = document.getElementById('btnCompareModels');
+    const compareWvResult = document.getElementById('compareWvResult');
+    const compareTrResult = document.getElementById('compareTrResult');
+    const compareSummary = document.getElementById('compareSummary');
 
     async function compareText() {
-        const text = inputText.value.trim();
+        const text = compareInput.value.trim();
         if (!text) return;
         const url = `/api/debug/compare?text=${encodeURIComponent(text)}`;
         const res = await fetch(url);
@@ -241,42 +224,47 @@ document.addEventListener('DOMContentLoaded', () => {
         const result = data.result;
         const labels = data.labels || {};
 
-        const render = (modelName, out) => {
-            const mlp = out.mlp;
-            const mlpPred = out.mlp_prediction;
-            const top = out.top_similar || [];
-            return {
-                model: modelName,
-                vector_dim: out.vector_dim,
-                mlp_ready: mlp.ready,
-                mlp_pred_index: mlpPred.class,
-                mlp_pred_action: mlpPred.action || (mlpPred.class !== null ? labels[mlpPred.class] : null),
-                mlp_confidence: mlpPred.confidence,
-                top_similar: top
-            };
-        };
+        // Renderiza resultado Word2Vec
+        const wv = result.word2vec;
+        const wvPred = wv.mlp_prediction;
+        compareWvResult.textContent =
+            `Ação: ${wvPred.action || labels[wvPred.class]}\n` +
+            `Confiança: ${(wvPred.confidence * 100).toFixed(1)}%\n` +
+            `Similaridade: ${wv.top_similar.length ? (wv.top_similar[0].similarity * 100).toFixed(1) + '%' : '—'}\n` +
+            `Dimensão do vetor: ${wv.vector_dim}`;
 
-        const wv = render('word2vec', result.word2vec);
-        const tr = render('transformer', result.transformer);
+        // Renderiza resultado Transformer
+        const tr = result.transformer;
+        const trPred = tr.mlp_prediction;
+        compareTrResult.textContent =
+            `Ação: ${trPred.action || labels[trPred.class]}\n` +
+            `Confiança: ${(trPred.confidence * 100).toFixed(1)}%\n` +
+            `Similaridade: ${tr.top_similar.length ? (tr.top_similar[0].similarity * 100).toFixed(1) + '%' : '—'}\n` +
+            `Dimensão do vetor: ${tr.vector_dim}`;
 
-        wvResult.textContent = JSON.stringify(wv, null, 2);
-        trResult.textContent = JSON.stringify(tr, null, 2);
-
-        await fetchStatus();
+        // Resumo visual
+        if ((wvPred.action || labels[wvPred.class]) === (trPred.action || labels[trPred.class])) {
+            compareSummary.textContent = "AÇÕES IGUAIS entre modelos";
+            compareSummary.style.color = "green";
+        } else {
+            compareSummary.textContent = "AÇÕES DIFERENTES entre modelos";
+            compareSummary.style.color = "red";
+        }
     }
 
-    async function changeModel(model) {
-        await fetch('/api/change_model', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ model })
-        });
-        await fetchStatus();
+    btnCompareModels.addEventListener('click', compareText);
+
+   const btnLoadMetrics = document.getElementById('btnLoadMetrics');
+    const metricsResult = document.getElementById('metricsResult');
+
+    async function loadMetrics() {
+        metricsResult.textContent = "Carregando...";
+        const res = await fetch('/api/model_metrics');
+        const data = await res.json();
+        metricsResult.textContent =
+            `Word2Vec:\nAcurácia: ${(data.word2vec.accuracy * 100).toFixed(1)}%\nF1: ${(data.word2vec.f1 * 100).toFixed(1)}%\n\n` +
+            `Transformer:\nAcurácia: ${(data.transformer.accuracy * 100).toFixed(1)}%\nF1: ${(data.transformer.f1 * 100).toFixed(1)}%`;
     }
 
-    btnCompare.addEventListener('click', compareText);
-    btnWV.addEventListener('click', () => changeModel('word2vec'));
-    btnTR.addEventListener('click', () => changeModel('transformer'));
-
-    fetchStatus();
+    btnLoadMetrics.addEventListener('click', loadMetrics);
 });

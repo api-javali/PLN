@@ -135,83 +135,7 @@ class VirtualAssistant:
                 self.mlp = mlp
             print(f"✅ Classificador treinado para: {model_type}")
             return mlp
-
-    def model_training_status(self, model_type=None):
-        """Retorna status de treino: 'idle', 'training' ou 'ready' para model_type ou todos"""
-        def status_for(m):
-            t = self.training_threads.get(m)
-            if m in self.classifiers:
-                return 'ready'
-            if t and t.is_alive():
-                return 'training'
-            return 'idle'
-        if model_type:
-            return status_for(model_type)
-        return {m: status_for(m) for m in ['word2vec', 'transformer']}
-
-    def _get_top_similar_for_model(self, model_type, text, top_k=3):
-        """Retorna top_k comandos similares para um modelo específico."""
-        if model_type not in ['word2vec', 'transformer'] or not self.commands_data:
-            return []
-        # Garante que os vetores dos comandos estão prontos
-        self._compute_command_vectors(model_type)
-        embed = self.word2vec_embedding if model_type == 'word2vec' else self.transformer_embedding
-        vec = embed.text_to_vector(text)
-        if vec is None:
-            return []
-        vec = np.array(vec, dtype=float)
-        norm = np.linalg.norm(vec) if np.linalg.norm(vec) != 0 else 1.0
-        vec_norm = vec / norm
-
-        arr = self.command_vectors.get(model_type)
-        if arr is None or arr.size == 0:
-            return []
-        sims = arr.dot(vec_norm)
-        idxs = np.argsort(sims)[-top_k:][::-1]
-        top = []
-        for idx in idxs:
-            cmd = self.commands_data[int(idx)]
-            top.append({'text': cmd['text'], 'action': cmd['action'], 'similarity': float(sims[int(idx)])})
-        return top
-
-    def debug_compare_models(self, text, top_k=3):
-        """Compara embeddings, MLP predictions e top-k similares entre os dois modelos."""
-        results = {}
-        for model in ['word2vec', 'transformer']:
-            embed = self.word2vec_embedding if model == 'word2vec' else self.transformer_embedding
-            vec = embed.text_to_vector(text)
-            vec = np.array(vec, dtype=float) if vec is not None else np.zeros(getattr(embed, 'vector_size', 0))
-            norm_val = float(np.linalg.norm(vec)) if vec is not None else 0.0
-
-            # MLP info
-            mlp = self.classifiers.get(model)
-            mlp_info = {
-                'ready': mlp is not None,
-                'input_size': getattr(mlp, 'input_size', None) if mlp else None,
-                'hidden_size': getattr(mlp, 'hidden_size', None) if mlp else None,
-                'output_size': getattr(mlp, 'output_size', None) if mlp else None,
-            }
-            mlp_pred = None
-            mlp_conf = None
-            if mlp is not None:
-                try:
-                    mlp_pred, mlp_conf = mlp.predict_class(vec.tolist())
-                except Exception as e:
-                    mlp_pred, mlp_conf = None, None
-                    print(f"⚠️ debug: falha predict MLP {model}: {e}")
-
-            top_sim = self._get_top_similar_for_model(model, text, top_k=top_k)
-
-            results[model] = {
-                'vector_dim': int(vec.shape[0]) if vec is not None else None,
-                'norm': norm_val,
-                'mlp': mlp_info,
-                'mlp_prediction': {'class': mlp_pred, 'confidence': mlp_conf},
-                'top_similar': top_sim,
-                'training_status': self.model_training_status(model)
-            }
-        return results
-
+    
     def switch_model(self, new_model, background=True):
         """Alterna entre modelos sem recriar objetos pesados.
         Se background=True, treina classificador em background se não existir.
@@ -224,13 +148,13 @@ class VirtualAssistant:
 
         # Ajuste de thresholds (opcional)
         if new_model == 'transformer':
-            self.confidence_threshold = 0.55
-            self.similarity_threshold = 0.40
-            self.high_similarity_threshold = 0.55
+            self.confidence_threshold = 0.8
+            self.similarity_threshold = 0.60
+            self.high_similarity_threshold = 0.80
         else:
-            self.confidence_threshold = 0.60
-            self.similarity_threshold = 0.45
-            self.high_similarity_threshold = 0.60
+            self.confidence_threshold = 0.80
+            self.similarity_threshold = 0.60
+            self.high_similarity_threshold = 0.80
 
         # Precompute vectors for fast similarity (sempre útil)
         self._compute_command_vectors(new_model)
@@ -492,7 +416,7 @@ class VirtualAssistant:
             if user_page and suggested_page and user_page != suggested_page:
                 print(f"⚠️ CONFLITO DE PÁGINA: usuário quer '{user_page}' mas sugestão é '{suggested_page}'")
                 return False
-        
+                                
         return True
     
     def process_command(self, user_input):
@@ -603,10 +527,18 @@ class VirtualAssistant:
         
         # 2) MLP disponível e confiante -> executa por MLP
         if predicted_class is not None and confidence >= self.confidence_threshold:
-            print(f"✅ EXECUÇÃO POR MLP ({confidence:.2%})")
             for cmd in self.commands_data:
                 if cmd['action'] == action:
                     params = self.extract_parameters(corrected_input, cmd)
+                    # Validação semântica extra para navegação
+                    if action == 'navigate':
+                        nav_keywords = ['vá', 'ir', 'navegue', 'navegar', 'acesse', 'acessar', 'abrir', 'sobre', 'home', 'contato', 'configurações']
+                        if not any(k in corrected_input for k in nav_keywords):
+                            continue  
+                    if not self.validate_action_match(user_input, cmd):
+                        continue  # Pula execução se não bater intenção
+                    if action == 'change_background_color' and 'color' not in params:
+                        continue  # Pula execução direta
                     return {
                         'action': action,
                         'params': params,
@@ -614,7 +546,6 @@ class VirtualAssistant:
                         'original_input': user_input,
                         'method': 'mlp'
                     }
-        
         # 3) Similaridade razoável -> sugere
         if similar_command and similarity >= self.similarity_threshold:
             # garantia extra: validação semântica (pode usar validate_action_match)

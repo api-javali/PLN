@@ -1,5 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from assistente.virtual_assistant import VirtualAssistant
+from assistente.model_comparison import get_model_metrics
 
 app = Flask(__name__)
 
@@ -94,6 +95,69 @@ def change_model():
 def debug_labels():
     """Retorna mapping de índices para nomes de ação"""
     return jsonify(assistant.label_decoder)
+
+@app.route('/api/debug/compare', methods=['GET'])
+def debug_compare():
+    """
+    Compara os modelos Word2Vec e Transformer para um texto informado.
+    Retorna predição do MLP, similaridade e parâmetros extraídos.
+    """
+    text = request.args.get('text', '')
+    if not text:
+        return jsonify({'error': 'Texto vazio'}), 400
+
+    result = {}
+    labels = assistant.label_decoder
+
+    for model in ['word2vec', 'transformer']:
+        assistant.switch_model(model, background=False)
+        embedding = assistant.word_embedding
+        mlp = assistant.mlp
+
+        # Vetor do texto
+        vector = embedding.text_to_vector(text)
+        vector_dim = len(vector) if hasattr(vector, '__len__') else embedding.vector_size
+
+        # MLP
+        mlp_ready = mlp is not None
+        if mlp_ready:
+            pred_class, confidence = mlp.predict_class(vector)
+            pred_action = labels.get(pred_class)
+        else:
+            pred_class, confidence, pred_action = None, 0.0, None
+
+        # Similaridade
+        similar_cmd, similarity = assistant.find_most_similar_command(text)
+        top_similar = []
+        if similar_cmd:
+            top_similar.append({
+                'text': similar_cmd['text'],
+                'action': similar_cmd['action'],
+                'similarity': similarity
+            })
+
+        result[model] = {
+            'vector_dim': vector_dim,
+            'mlp': {'ready': mlp_ready},
+            'mlp_prediction': {
+                'class': pred_class,
+                'confidence': confidence,
+                'action': pred_action
+            },
+            'top_similar': top_similar
+        }
+
+    return jsonify({'result': result, 'labels': labels})
+
+from assistente.model_comparison import get_model_metrics
+
+@app.route('/api/model_metrics')
+def model_metrics():
+    try:
+        metrics = get_model_metrics(assistant)  # Passe o assistente global
+        return jsonify(metrics)
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("\n" + "="*60)
