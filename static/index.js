@@ -16,6 +16,7 @@ document.querySelectorAll('.nav-item').forEach(item => {
     });
 });
 
+
 function navigateToPage(page) {
     // Atualiza itens do menu
     document.querySelectorAll('.nav-item').forEach(item => {
@@ -210,3 +211,72 @@ async function changeModel() {
 
 // Carrega estado ao iniciar
 loadInitialState();
+
+document.addEventListener('DOMContentLoaded', () => {
+    const inputText = document.getElementById('inputText');
+    const btnCompare = document.getElementById('btnCompare');
+    const btnWV = document.getElementById('btnWV');
+    const btnTR = document.getElementById('btnTR');
+    const wvResult = document.getElementById('wvResult');
+    const trResult = document.getElementById('trResult');
+    const statusDiv = document.getElementById('statusDiv');
+
+    async function fetchStatus() {
+        const res = await fetch('/api/debug/status');
+        const data = await res.json();
+        statusDiv.textContent = `Current: ${data.current_model} — Training: ${JSON.stringify(data.training_status)}`;
+        return data;
+    }
+
+    async function compareText() {
+        const text = inputText.value.trim();
+        if (!text) return;
+        const url = `/api/debug/compare?text=${encodeURIComponent(text)}`;
+        const res = await fetch(url);
+        const data = await res.json();
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+        const result = data.result;
+        const labels = data.labels || {};
+
+        const render = (modelName, out) => {
+            const mlp = out.mlp;
+            const mlpPred = out.mlp_prediction;
+            const top = out.top_similar || [];
+            return {
+                model: modelName,
+                vector_dim: out.vector_dim,
+                mlp_ready: mlp.ready,
+                mlp_pred_index: mlpPred.class,
+                mlp_pred_action: mlpPred.action || (mlpPred.class !== null ? labels[mlpPred.class] : null),
+                mlp_confidence: mlpPred.confidence,
+                top_similar: top
+            };
+        };
+
+        const wv = render('word2vec', result.word2vec);
+        const tr = render('transformer', result.transformer);
+
+        wvResult.textContent = JSON.stringify(wv, null, 2);
+        trResult.textContent = JSON.stringify(tr, null, 2);
+
+        await fetchStatus();
+    }
+
+    async function changeModel(model) {
+        await fetch('/api/change_model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model })
+        });
+        await fetchStatus();
+    }
+
+    btnCompare.addEventListener('click', compareText);
+    btnWV.addEventListener('click', () => changeModel('word2vec'));
+    btnTR.addEventListener('click', () => changeModel('transformer'));
+
+    fetchStatus();
+});

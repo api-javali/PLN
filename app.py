@@ -90,6 +90,11 @@ def change_model():
     message = assistant.switch_model(new_model)
     return jsonify({'message': message})
 
+@app.route('/api/debug/labels', methods=['GET'])
+def debug_labels():
+    """Retorna mapping de índices para nomes de ação"""
+    return jsonify(assistant.label_decoder)
+
 if __name__ == '__main__':
     print("\n" + "="*60)
     print("🧠 ASSISTENTE VIRTUAL - WORD2VEC + MLP")

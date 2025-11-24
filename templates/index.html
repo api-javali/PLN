@@ -57,7 +57,24 @@
             </select>
             <p id="currentModelDisplay">Modelo atual: <strong>Carregando...</strong></p>    
             </div>
-
+            <!-- Comparador de Modelos -->
+            <div class="model-compare" style="margin-top:12px;">
+                <h3>🔎 Comparar Modelos</h3>
+                <input id="compareInput" type="text" placeholder="Frase para comparar (ex: mude a cor para azul)" style="width:100%; margin-bottom:6px;" />
+                <button id="btnCompareModels" style="width:100%;">Comparar Word2Vec × Transformer</button>
+                <div style="margin-top:8px; display:flex; gap:6px;">
+                    <div style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd;" id="compareWv">
+                        <strong>Word2Vec</strong>
+                        <pre id="compareWvResult">—</pre>
+                    </div>
+                    <div style="flex:1; padding:8px; border-radius:6px; border:1px solid #ddd;" id="compareTr">
+                        <strong>Transformer</strong>
+                        <pre id="compareTrResult">—</pre>
+                    </div>
+                </div>
+                <div id="compareSummary" style="margin-top:6px; font-weight:bold;"></div>
+            </div>
+            
             <div class="example-commands">
                 <h3>💡 Exemplos de Comandos</h3>
                 <button class="example-btn" onclick="sendExample('mude a cor do fundo para azul')">
