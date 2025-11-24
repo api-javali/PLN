@@ -49,6 +49,15 @@
                 </div>
             </div>
 
+            <div class="model-selector">
+            <h3>🧠 Modelo de Embedding</h3>
+            <select id="modelSelect" onchange="changeModel()">
+                <option value="word2vec">Word2Vec</option>
+                <option value="transformer">Transformer (Sentence Transformers)</option>
+            </select>
+            <p id="currentModelDisplay">Modelo atual: <strong>Carregando...</strong></p>    
+            </div>
+
             <div class="example-commands">
                 <h3>💡 Exemplos de Comandos</h3>
                 <button class="example-btn" onclick="sendExample('mude a cor do fundo para azul')">

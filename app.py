@@ -75,6 +75,20 @@ def get_similar_words(word):
         })
     return jsonify({'error': f'Palavra "{word}" não encontrada'}), 404
 
+@app.route('/api/current_model', methods=['GET'])
+def get_current_model():
+    return jsonify({'model': assistant.embedding_model_type})
+
+@app.route('/api/change_model', methods=['POST'])
+def change_model():
+    data = request.get_json()
+    new_model = data.get('model', 'word2vec')
+    
+    if new_model not in ['word2vec', 'transformer']:
+        return jsonify({'error': 'Modelo inválido'}), 400
+    
+    message = assistant.switch_model(new_model)
+    return jsonify({'message': message})
 
 if __name__ == '__main__':
     print("\n" + "="*60)

@@ -180,8 +180,31 @@ async function loadInitialState() {
         };
         
         updateUI(update);
+        const modelResponse = await fetch('/api/current_model');
+        const modelData = await modelResponse.json();
+        document.getElementById('modelSelect').value = modelData.model;
+        document.getElementById('currentModelDisplay').innerHTML = `Modelo atual: <strong>${modelData.model === 'word2vec' ? 'Word2Vec' : 'Transformer (Sentence Transformers)'}</strong>`;
+
     } catch (error) {
         console.error('Erro ao carregar estado:', error);
+    }
+}
+
+async function changeModel() {
+    const model = document.getElementById('modelSelect').value;
+    try {
+        const response = await fetch('/api/change_model', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ model: model })
+        });
+        const data = await response.json();
+        addMessage('assistant', data.message || 'Modelo alterado!');
+        
+        // Atualiza o display do modelo
+        document.getElementById('currentModelDisplay').innerHTML = `Modelo atual: <strong>${model === 'word2vec' ? 'Word2Vec' : 'Transformer (Sentence Transformers)'}</strong>`;
+    } catch (error) {
+        addMessage('assistant', 'Erro ao mudar modelo: ' + error.message);
     }
 }
 

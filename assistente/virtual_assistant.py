@@ -1,19 +1,27 @@
 import json
 import numpy as np
+import threading
+from assistente.transformer_embedding import TransformerEmbedding
 from assistente.word2vec import Word2VecEmbedding
 from assistente.classifier import MLPClassifier
 
 
 class VirtualAssistant:
     def __init__(self):
-        # Word2Vec profissional (Gensim)
-        self.word_embedding = Word2VecEmbedding(
-            vector_size=50,
-            window=3,
-            epochs=100
-        )
+        # Carrega ambos os embeddings na inicialização
+        self.word2vec_embedding = Word2VecEmbedding(vector_size=50, window=3, epochs=100)
+        self.transformer_embedding = TransformerEmbedding(model_name='paraphrase-multilingual-MiniLM-L12-v2')
+        
+        # Define o padrão
+        self.embedding_model_type = 'word2vec'
+        self.word_embedding = self.word2vec_embedding
         
         self.mlp = None
+        self.classifiers = {}         # cache de MLP por modelo: 'word2vec' | 'transformer'
+        self.command_vectors = {}     # cache de vetores dos comandos por modelo
+        self.training_threads = {}
+        self.training_lock = threading.Lock()
+        
         self.label_encoder = {}
         self.label_decoder = {}
         self.commands_data = []
@@ -37,8 +45,138 @@ class VirtualAssistant:
         self.similarity_threshold = 0.45
         self.high_similarity_threshold = 0.60
         
+        # Carrega dados
         self.load_training_data()
-        self.train_models()
+        # Prepara actions/labels
+        self._prepare_labels()
+        # Prepara modelos e classifiers em background (para troca rápida)
+        self.prepare_models_background()
+        # Aguarda treinamentos mínimos ou carrega classifier default
+        # Se quiser iniciar com modelo alternativo, pode trocar aqui
+        if 'word2vec' in self.classifiers:
+            self.mlp = self.classifiers['word2vec']
+        else:
+            # se não estiver pronto, treinamos o atual sincronamente
+            self._train_for_model('word2vec')
+            self.mlp = self.classifiers.get('word2vec')
+    
+    def _prepare_labels(self):
+        actions = sorted(set(cmd['action'] for cmd in self.commands_data))
+        self.label_encoder = {action: idx for idx, action in enumerate(actions)}
+        self.label_decoder = {idx: action for action, idx in self.label_encoder.items()}
+    
+    def prepare_models_background(self):
+        """Inicia threads para pré-treinar MLPs e pré-computar vetores"""
+        for model in ['word2vec', 'transformer']:
+            t = threading.Thread(target=self._train_for_model, args=(model,), daemon=True)
+            self.training_threads[model] = t
+            t.start()
+    
+    def _compute_command_vectors(self, model_type):
+        """Pré-computa e normaliza vetores dos comandos para busca rápida"""
+        if model_type in self.command_vectors:
+            return self.command_vectors[model_type]
+        
+        embed = self.word2vec_embedding if model_type == 'word2vec' else self.transformer_embedding
+        vectors = []
+        for cmd in self.commands_data:
+            vec = embed.text_to_vector(cmd['text'])
+            if vec is None:
+                vec = np.zeros(embed.vector_size)
+            vec = np.array(vec, dtype=float)
+            norm = np.linalg.norm(vec) if np.linalg.norm(vec) != 0 else 1.0
+            vectors.append(vec / norm)
+        if vectors:
+            arr = np.vstack(vectors)
+        else:
+            arr = np.zeros((0, embed.vector_size))
+        self.command_vectors[model_type] = arr
+        return arr
+    
+    def _prepare_dataset_for_model(self, model_type):
+        """Prepares X, y using cached command vectors or computing them"""
+        # Build vocab if needed (word2vec)
+        texts = [cmd['text'] for cmd in self.commands_data]
+        if model_type == 'word2vec':
+            tokenized_texts = [self.word2vec_embedding.preprocess_text(t) for t in texts]
+            # build vocab only once safely
+            self.word2vec_embedding.build_vocab(tokenized_texts)
+        
+        # Ensure command vectors computed
+        vectors = self._compute_command_vectors(model_type)
+        X = [v.tolist() for v in vectors]
+        
+        actions = sorted(set(cmd['action'] for cmd in self.commands_data))
+        y = []
+        for cmd in self.commands_data:
+            label_vector = [0.0] * len(actions)
+            label_vector[actions.index(cmd['action'])] = 1.0
+            y.append(label_vector)
+        return X, y, vectors.shape[1] if vectors.size else (self.word2vec_embedding.vector_size if model_type=='word2vec' else self.transformer_embedding.vector_size)
+    
+    def _train_for_model(self, model_type, epochs=200):
+        """Treina classifier para um modelo específico e armazena no cache."""
+        with self.training_lock:
+            # Evita retreinar se já existe
+            if model_type in self.classifiers:
+                return self.classifiers[model_type]
+            print(f"\n🔧 Treinando classificador para: {model_type}")
+            X, y, input_size = self._prepare_dataset_for_model(model_type)
+            if not X or not y:
+                print("⚠️ Dataset vazio ou insuficiente para treinar")
+                return None
+            hidden_size = min(48, max(12, input_size // 2))
+            output_size = len(y[0])
+            mlp = MLPClassifier(input_size, hidden_size, output_size, learning_rate=0.15)
+            mlp.train(X, y, epochs=epochs)
+            self.classifiers[model_type] = mlp
+            # se o modelo atual é esse, atualiza self.mlp
+            if self.embedding_model_type == model_type:
+                self.mlp = mlp
+            print(f"✅ Classificador treinado para: {model_type}")
+            return mlp
+    
+    def switch_model(self, new_model, background=True):
+        """Alterna entre modelos sem recriar objetos pesados.
+        Se background=True, treina classificador em background se não existir.
+        """
+        if new_model not in ['word2vec', 'transformer']:
+            raise ValueError("Modelo inválido")
+
+        self.embedding_model_type = new_model
+        self.word_embedding = self.word2vec_embedding if new_model == 'word2vec' else self.transformer_embedding
+
+        # Ajuste de thresholds (opcional)
+        if new_model == 'transformer':
+            self.confidence_threshold = 0.55
+            self.similarity_threshold = 0.40
+            self.high_similarity_threshold = 0.55
+        else:
+            self.confidence_threshold = 0.60
+            self.similarity_threshold = 0.45
+            self.high_similarity_threshold = 0.60
+
+        # Precompute vectors for fast similarity (sempre útil)
+        self._compute_command_vectors(new_model)
+
+        # Se já existe classificador treinado, use-o
+        if new_model in self.classifiers:
+            self.mlp = self.classifiers[new_model]
+            return f"Modelo alterado para {new_model} (cache pronto)"
+
+        # Não existe classificador pronto — não usar MLP até treinar
+        self.mlp = None
+
+        # Treina em background ou de forma síncrona
+        if background:
+            t = threading.Thread(target=self._train_for_model, args=(new_model,), daemon=True)
+            t.start()
+            self.training_threads[new_model] = t
+            return f"Modelo alterado para {new_model}. Classificador treinando em background..."
+        else:
+            mlp = self._train_for_model(new_model)
+            self.mlp = mlp
+            return f"Modelo alterado para {new_model} (treinado agora)."
     
     def load_training_data(self):
         """Carrega dados de treinamento do arquivo JSON"""
@@ -49,87 +187,42 @@ class VirtualAssistant:
                 print(f"✅ {len(self.commands_data)} comandos carregados do training_data.json")
         except FileNotFoundError:
             print("⚠️ Arquivo training_data.json não encontrado")
-            raise
+            self.commands_data = []
     
     def train_models(self):
-        """Treina Word2Vec e MLP"""
-        print("\n" + "="*60)
-        print("🧠 TREINAMENTO DO ASSISTENTE VIRTUAL")
-        print("="*60)
-        
-        texts = [cmd['text'] for cmd in self.commands_data]
-        actions = sorted(set(cmd['action'] for cmd in self.commands_data))
-        
-        self.label_encoder = {action: idx for idx, action in enumerate(actions)}
-        self.label_decoder = {idx: action for action, idx in self.label_encoder.items()}
-        
-        print("\n📝 ETAPA 1: Word2Vec (Gensim)")
-        tokenized_texts = []
-        for text in texts:
-            words = self.word_embedding.preprocess_text(text)
-            tokenized_texts.append(words)
-        
-        self.word_embedding.build_vocab(tokenized_texts)
-        
-        print("\n🔢 ETAPA 2: Preparando dados para MLP")
-        X = []
-        y = []
-        for cmd in self.commands_data:
-            vector = self.word_embedding.text_to_vector(cmd['text'])
-            X.append(vector.tolist())
-            
-            label_vector = [0.0] * len(actions)
-            label_vector[self.label_encoder[cmd['action']]] = 1.0
-            y.append(label_vector)
-        
-        print(f"   • Exemplos de treinamento: {len(X)}")
-        print(f"   • Dimensão dos vetores: {len(X[0])}")
-        print(f"   • Classes: {len(actions)}")
-        
-        print("\n🤖 ETAPA 3: MLP com Backpropagation")
-        input_size = self.word_embedding.vector_size
-        hidden_size = min(30, max(10, input_size // 2))
-        output_size = len(actions)
-        
-        print(f"   • Arquitetura: {input_size} → {hidden_size} → {output_size}")
-        print(f"   • Learning rate: 0.15")
-        print(f"   • Épocas: 200")
-        
-        self.mlp = MLPClassifier(input_size, hidden_size, output_size, learning_rate=0.15)
-        self.mlp.train(X, y, epochs=200)
-        
-        print("\n" + "="*60)
-        print("✅ TREINAMENTO CONCLUÍDO")
-        print("="*60)
-        print(f"📊 Resumo:")
-        print(f"   • Vocabulário: {len(self.word_embedding.model.wv)} palavras")
-        print(f"   • Ações: {', '.join(actions)}")
-        print(f"   • Threshold confiança: {self.confidence_threshold*100}%")
-        print(f"   • Threshold similaridade: {self.similarity_threshold*100}%")
-        print("="*60 + "\n")
+        """Treina o modelo atual (compatibilidade backward)"""
+        return self._train_for_model(self.embedding_model_type)
     
     def calculate_similarity(self, vec1, vec2):
         """Calcula similaridade cosseno entre dois vetores"""
         return self.word_embedding.cosine_similarity(vec1, vec2)
     
     def find_most_similar_command(self, user_input):
-        """Encontra o comando mais similar no treinamento"""
-        user_vector = self.word_embedding.text_to_vector(user_input)
-        max_similarity = 0.0
-        most_similar = None
-        
-        if not any(user_vector):
+        """Encontra o comando mais similar no treinamento usando cache e produto escalar"""
+        user_vec = self.word_embedding.text_to_vector(user_input)
+        if user_vec is None:
             return None, 0.0
+        user_vec = np.array(user_vec, dtype=float)
+        norm = np.linalg.norm(user_vec) if np.linalg.norm(user_vec) != 0 else 1.0
+        user_vec_norm = user_vec / norm
         
-        for command in self.commands_data:
-            command_vector = self.word_embedding.text_to_vector(command['text'])
-            similarity = self.calculate_similarity(user_vector, command_vector)
-            
-            if similarity > max_similarity:
-                max_similarity = similarity
-                most_similar = command
-        
-        return most_similar, max_similarity
+        model_type = self.embedding_model_type
+        if model_type in self.command_vectors and self.command_vectors[model_type].size > 0:
+            arr = self.command_vectors[model_type]  # N x D normalized
+            sims = arr.dot(user_vec_norm)
+            idx = int(np.argmax(sims))
+            return self.commands_data[idx], float(sims[idx])
+        else:
+            # Fallback: compute pairwise
+            max_sim = 0.0
+            best = None
+            for command in self.commands_data:
+                cmd_vec = self.word_embedding.text_to_vector(command['text'])
+                sim = self.calculate_similarity(user_vec_norm, cmd_vec)
+                if sim > max_sim:
+                    max_sim = sim
+                    best = command
+            return best, max_sim       
     
     def levenshtein_distance(self, s1, s2):
         """Calcula a distância de Levenshtein entre duas strings"""
@@ -382,30 +475,44 @@ class VirtualAssistant:
             self.waiting_confirmation = False
             self.last_suggestion = None
         
-        # Processamento normal
+        # Processamento normal - garante vetor válido
         user_vector = self.word_embedding.text_to_vector(corrected_input)
-        
+        if user_vector is None:
+            # Garante um vetor de zeros com dimensão do embedding atual
+            user_vector = np.zeros(getattr(self.word_embedding, 'vector_size', 0))
         if isinstance(user_vector, np.ndarray):
             user_vector = user_vector.tolist()
         
-        predicted_class, confidence = self.mlp.predict_class(user_vector)
-        action = self.label_decoder[predicted_class]
+        # Primeiro tenta MLP se estiver pronto; captura exceptions (dimensão, etc.)
+        predicted_class = None
+        confidence = 0.0
+        if self.mlp is not None:
+            try:
+                predicted_class, confidence = self.mlp.predict_class(user_vector)
+            except Exception as e:
+                print(f"⚠️ Falha no MLP predict (provável mismatch de dimensão): {e}")
+                predicted_class, confidence = None, 0.0
         
+        action = self.label_decoder.get(predicted_class) if predicted_class is not None else None
+        
+        # Similaridade (sempre disponível) - busca mais similar
         similar_command, similarity = self.find_most_similar_command(corrected_input)
         
         print(f"🔍 Input: '{user_input}'")
         if corrected_input != user_input.lower():
             print(f"🔧 Corrigido: '{corrected_input}'")
-        print(f"🤖 MLP: {action} ({confidence:.2%})")
+        if action:
+            print(f"🤖 MLP: {action} ({confidence:.2%})")
+        else:
+            print(f"🤖 MLP: indisponível ou sem predição confiável")
         
         if similar_command:
             print(f"📊 Similar: '{similar_command['text']}' ({similarity:.2%})")
         else:
             print(f"📊 Similar: Nenhum comando similar encontrado")
         
-        # Sistema de decisão híbrido
-        
-        # Nível 1: Similaridade >60% → EXECUTA DIRETO
+        # Sistema de decisão híbrido - ordem das verificações:
+        # 1) Similaridade alta -> executa direto
         if similar_command and similarity >= self.high_similarity_threshold:
             print(f"✅ EXECUÇÃO DIRETA POR SIMILARIDADE ({similarity:.2%})")
             params = self.extract_parameters(corrected_input, similar_command)
@@ -418,8 +525,8 @@ class VirtualAssistant:
                 'similar_command': similar_command['text']
             }
         
-        # Nível 2: Confiança MLP boa (>60%)
-        elif confidence >= self.confidence_threshold:
+        # 2) MLP disponível e confiante -> executa por MLP
+        if predicted_class is not None and confidence >= self.confidence_threshold:
             print(f"✅ EXECUÇÃO POR MLP ({confidence:.2%})")
             for cmd in self.commands_data:
                 if cmd['action'] == action:
@@ -432,42 +539,45 @@ class VirtualAssistant:
                         'method': 'mlp'
                     }
         
-        # Nível 3: Similaridade razoável (>45%) → SUGERE
-        elif similar_command and similarity >= self.similarity_threshold:
-            print(f"💡 SUGESTÃO ({similarity:.2%}) - Aguardando confirmação")
-            
-            self.last_suggestion = similar_command
-            self.waiting_confirmation = True
-            
-            return {
-                'action': 'suggest',
-                'original_input': user_input,
-                'suggested_command': similar_command['text'],
-                'similarity': similarity,
-                'confidence': confidence,
-                'waiting_confirmation': True
-            }
+        # 3) Similaridade razoável -> sugere
+        if similar_command and similarity >= self.similarity_threshold:
+            # garantia extra: validação semântica (pode usar validate_action_match)
+            if self.validate_action_match(user_input, similar_command):
+                print(f"💡 SUGESTÃO ({similarity:.2%}) - Aguardando confirmação")
+                self.last_suggestion = similar_command
+                self.waiting_confirmation = True
+                return {
+                    'action': 'suggest',
+                    'original_input': user_input,
+                    'suggested_command': similar_command['text'],
+                    'similarity': similarity,
+                    'confidence': confidence,
+                    'waiting_confirmation': True
+                }
+            else:
+                print("⚠️ Sugestão rejeitada por validação de parâmetros/ação; prosseguindo para fallback")
         
-        # Nível 4: Não reconheceu
+        # 4) fallback: desconhecido - tenta retornar sugestão informal baseada em similaridade, senão desconhecido
+        print(f"❌ NÃO RECONHECIDO")
+        words = self.word_embedding.preprocess_text(corrected_input)
+        if not words or len(words) == 0:
+            message = "Comando vazio ou não reconhecido. Por favor, seja mais específico."
+        elif len(words) == 1 and len(user_input) < 5:
+            message = f"Comando muito curto: '{user_input}'. Por favor, descreva melhor o que deseja fazer."
         else:
-            print(f"❌ NÃO RECONHECIDO")
-            
-            words = self.word_embedding.preprocess_text(corrected_input)
-            if not words or len(words) == 0:
-                message = "Comando vazio ou não reconhecido. Por favor, seja mais específico."
-            elif len(words) == 1 and len(user_input) < 5:
-                message = f"Comando muito curto: '{user_input}'. Por favor, descreva melhor o que deseja fazer."
+            # Se existia similaridade baixa, ainda pode retornar sugestão fraca
+            if similar_command and similarity > 0.2:
+                message = f"Não reconheci com confiança. Talvez você quis dizer: '{similar_command['text']}' (similaridade {similarity:.2%})."
             else:
                 message = "Comando não reconhecido. Por favor, reformule seu comando."
-            
-            return {
-                'action': 'unknown',
-                'original_input': user_input,
-                'message': message,
-                'confidence': confidence,
-                'similarity': similarity if similar_command else 0.0
-            }
-    
+        
+        return {
+            'action': 'unknown',
+            'original_input': user_input,
+            'message': message,
+            'confidence': confidence,
+            'similarity': similarity if similar_command else 0.0
+        }
     def execute_action(self, action_data):
         """Executa a ação e retorna mensagem"""
         action = action_data['action']
