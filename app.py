@@ -1,6 +1,6 @@
 from flask import Flask, render_template, request, jsonify
 from assistente.virtual_assistant import VirtualAssistant
-from assistente.model_comparison import get_model_metrics
+
 
 app = Flask(__name__)
 
@@ -149,15 +149,7 @@ def debug_compare():
 
     return jsonify({'result': result, 'labels': labels})
 
-from assistente.model_comparison import get_model_metrics
 
-@app.route('/api/model_metrics')
-def model_metrics():
-    try:
-        metrics = get_model_metrics(assistant)  # Passe o assistente global
-        return jsonify(metrics)
-    except Exception as e:
-        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     print("\n" + "="*60)
